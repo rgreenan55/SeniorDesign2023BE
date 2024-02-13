@@ -19,22 +19,25 @@ with open('data\\ai_model.pkl', 'rb') as f:
 
 @app.route('/')
 def home():
-    return '''<a href="/get-house-info?address=615 Reid St, Fredericton, NB, CA">Get House Info</a><br><br>
+    return '''<a href="/get-house-price-by-address?address=615 Reid St, Fredericton, NB, CA">Get Price By Address</a><br><br>
+    <a href="/get-ai-url">Get AI Test URL</a>  -  <a href="/get-ai-args">Get AI Args</a><br><br>
+    <br><br>
+    <a href="/get-house-price-by-address-test?address=615 Reid St, Fredericton, NB, CA">Get Test Price By Address</a><br><br>
     <a href="/get-test-url">Get Test URL</a>  -  <a href="/get-ai-args-test">Get Test AI Args</a><br><br>
-    <a href="/get-ai-url">Get AI Test URL</a>  -  <a href="/get-ai-args">Get AI Args</a>'''
+    '''
 
-@app.route('/get-house-info')
-def get_house_info():
-    if not 'address' in request.args:
-        return "No address provided, use the format /get-house-info?address='address'"
-    address = request.args.get('address')
-    if address == None or address == "":
-        return "No address provided"
-    if address in house_info_list_test:
-        house_info = house_info_list_test[address]
-    else:
-        house_info = "Balls" 
-    return house_info
+# @app.route('/get-house-info')
+# def get_house_info():
+#     if not 'address' in request.args:
+#         return "No address provided, use the format /get-house-info?address='address'"
+#     address = request.args.get('address')
+#     if address == None or address == "":
+#         return "No address provided"
+#     if address in house_info_list_test:
+#         house_info = house_info_list_test[address]
+#     else:
+#         house_info = "Balls" 
+#     return house_info
 
 def populateHouseInfoListTest(house_info_list_test):
     house_info_list_test["615 Reid St, Fredericton, NB, CA"] = {'bedrooms': 5, 'bathrooms': 2, 'sqft_living': 1500, 'sqft_lot': 10000, 'floors': 1, 'yr_built': 1990, 'yr_renovated': 2010, 'postal_code': 52345, 'lat': 45.9516307, 'long': -66.6493478}
@@ -47,6 +50,23 @@ def populateHouseInfoList(house_info_list):
         for i in range(len(x_test_data)):
             info = {"data" : x_test_data[i], "price" : y_test_data[i]}
             house_info_list.append(info)
+
+def getArgsByAddress(address):
+    if address == None or address == "":
+        return {"status": False, "data": "No address provided"}
+    if address in house_info_list:
+        return {"status": True, "data": house_info_list[address]}
+    else:
+        return {"status": False, "data": "House Not Available"}
+    
+def getArgsByAddressTest(address):
+    print(address)
+    if address == None or address == "":
+        return {"status": False, "data": "No address provided"}
+    if address in house_info_list_test:
+        return {"status": True, "data": house_info_list_test[address]}
+    else:
+        return {"status": False, "data": "House Not Available"}
 
 @app.route('/get-house-price')
 def get_house_price():
@@ -62,7 +82,18 @@ def get_house_price():
         else:
             queryArgs[arg] = 0
     value = queryAI(queryArgs)
+    print(value, price)
     return {"estimate" : value, "actual" : price}
+
+@app.route('/get-house-price-by-address')
+def get_house_price_address():
+    if not 'address' in request.args:
+         return "No address provided"
+    queryArgs = getArgsByAddress(request.args.get("address"))
+    if not queryArgs["status"]:
+        return queryArgs["data"]
+    value = queryAI(queryArgs["data"])
+    return {"estimate" : value, "actual" : 0}
 
 @app.route('/get-house-price-test')
 def get_house_price_test():
@@ -74,6 +105,16 @@ def get_house_price_test():
         else:
             queryArgs[arg] = 0
     value = queryAITest(queryArgs)
+    return {"estimate" : value, "actual" : 0}
+
+@app.route('/get-house-price-by-address-test')
+def get_house_price_address_test():
+    if not 'address' in request.args:
+         return "No address provided"
+    queryArgs = getArgsByAddressTest(request.args.get("address"))
+    if not queryArgs["status"]:
+        return queryArgs["data"]
+    value = queryAITest(queryArgs["data"])
     return {"estimate" : value, "actual" : 0}
     
 
@@ -100,8 +141,6 @@ def queryAITest(query):
     value += ((int(query["yr_built"]) - 1950) * 100) if int(query["yr_built"]) != 0 else 0
     value += ((int(query["yr_renovated"]) - 2010) * 1000) if int(query["yr_renovated"]) != 0 else 0
     value += int(query["postal_code"]) * 1
-    value += int(query["lat"]) * 0
-    value += int(query["long"]) * 0
     return value
 
 @app.route('/get-test-url')
