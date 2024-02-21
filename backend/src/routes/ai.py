@@ -12,8 +12,9 @@ from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.metrics import mean_squared_error
 from sklearn.model_selection import GridSearchCV
 import pickle
+import time
 
-with open('data\\ai_model.pkl', 'rb') as f:
+with open('data\\ottawa_ai_model.pkl', 'rb') as f:
     columns = pickle.load(f)
     model_rf = pickle.load(f)
 
@@ -44,7 +45,7 @@ def populateHouseInfoListTest(house_info_list_test):
     house_info_list_test["test"] = house_info_list_test["615 Reid St, Fredericton, NB, CA"]
 
 def populateHouseInfoList(house_info_list):
-    with open('data\\eval_data.pkl', 'rb') as f:
+    with open('data\\ottawa_eval_data.pkl', 'rb') as f:
         x_test_data = pickle.load(f)
         y_test_data = pickle.load(f).tolist()
         for i in range(len(x_test_data)):
@@ -73,7 +74,7 @@ def get_house_price():
     argsList = get_ai_args()
     queryArgs = {}
     if "price" in request.args:
-        price = int(float(request.args.get("price"))*100000)
+        price = int(float(request.args.get("price")))
     else:
         price = 0
     for arg in argsList:
@@ -83,7 +84,7 @@ def get_house_price():
             queryArgs[arg] = 0
     value = queryAI(queryArgs)
     print(value, price)
-    return {"estimate" : value, "actual" : price}
+    return {"estimate" : value, "actual" : price, "difference" : value - price, "percent" : (value - price) / (price+0.000001) * 100}
 
 @app.route('/get-house-price-by-address')
 def get_house_price_address():
@@ -120,6 +121,7 @@ def get_house_price_address_test():
 
 @app.route('/get-ai-args')
 def get_ai_args():
+    print(columns)
     return columns
 
 @app.route('/get-ai-args-test')
@@ -129,7 +131,7 @@ def get_ai_args_test():
 def queryAI(query):
     query = pd.DataFrame(query, index=[0])
     value = model_rf.predict(query)[0]
-    return int(value * 100000)
+    return value
 
 def queryAITest(query):
     value = 0
@@ -174,6 +176,25 @@ def get_ai_url():
         url += param + "=" + str(params[param]) + "&"
     url += "price=" + str(test_data["price"])
     return "<a href=" + url + ">" + url + "</a>"
+
+@app.route('/test-throughput')
+def test_throughput():
+    if not 'count' in request.args:
+        return "No count provided"
+    try:
+        testCount = int(request.args.get("count"))
+    except:
+        return "Invalid count"
+    startTime = time.time()
+    for i in range(testCount):
+        params = {}
+        test_data = house_info_list[random.randint(0, len(house_info_list) - 1)]
+        columns = get_ai_args()
+        for i in range(len(columns)):
+            params[columns[i]] = test_data["data"][i]
+        queryAI(params)
+    timeTaken = time.time() - startTime
+    return {"time" : timeTaken, "timePerQuery" : timeTaken / testCount}
 
 house_info_list_test = {}
 populateHouseInfoListTest(house_info_list_test)

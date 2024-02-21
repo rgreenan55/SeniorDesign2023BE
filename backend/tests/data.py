@@ -10,14 +10,14 @@ from sklearn.metrics import mean_squared_error
 from sklearn.model_selection import GridSearchCV
 import pickle
 
-with open('..\\src\\data\\ai_model.pkl', 'rb') as f:
+with open('..\\src\\data\\ottawa_ai_model.pkl', 'rb') as f:
     columns = pickle.load(f)
     model_rf = pickle.load(f)
 
 print("Testing Columns...")
-assert columns == ["MedInc", "HouseAge", "AveRooms", "Latitude", "Longitude"], "Test failed!"
+assert columns == ['yearBuilt', 'bedrooms', 'bathrooms', 'parking', 'garage', 'lotDepth', 'lotFrontage', 'postalCode', 'propertyType', 'style'], "Test failed!"
 print("\tTest passed!")
 
 print("Testing Model...")
-assert model_rf.predict([[0, 0, 0, 0, 0]])[0] > 0, "Test failed!"
+assert model_rf.predict([[0,0,0,0,0,0,0,0,0,0]])[0] > 0, "Test failed!"
 print("\tTest passed!")
