@@ -114,7 +114,7 @@ def get_house_price_address():
     actual = queryArgs["data"]["price"]
     return {"estimate" : value, "actual" : actual, "difference" : value - actual, "percent" : (value - actual) / (actual+0.000001) * 100}
 
-@app.route('/get-all-addresseses-by-prefix')
+@app.route('/get-all-addresses-by-prefix')
 def search_for_address_prefix():
     if not 'prefix' in request.args:
         return "No prefix provided"
