@@ -24,6 +24,8 @@ def home():
     return '''<a href="/get-assessment-by-address?address=1466 Launay Avenue, Ottawa, Ontario">Get Price By Address</a><br><br>
     <a href="/get-ai-url">Get AI Test URL</a>  -  <a href="/get-ai-args">Get AI Args</a><br><br>
     <a href="/get-all-addresses">Get All Addresses</a> - <a href="/get-all-addresses-by-prefix?prefix=1466">Get Addresses By Prefix</a><br><br>
+    <a href="/get-random-address-and-attributes">Get Random Address and Attributes</a><br><br>
+    <a href="/get-random-address-and-attributes-with-results">Get Random Address and Attributes with Results</a><br><br>
     <br><br>
     <a href="/get-assessment-by-address-test?address=615 Reid St, Fredericton, NB, CA">Get Test Price By Address</a><br><br>
     <a href="/get-test-url">Get Test URL</a>  -  <a href="/get-ai-args-test">Get Test AI Args</a><br><br>
@@ -132,6 +134,23 @@ def get_all_addresses():
     for house in house_info_list.keys():
         output.append({"address" : house, "lat" : house_info_list[house]["address"]["lat"], "lng" : house_info_list[house]["address"]["lon"]})
     return output
+
+@app.route('/get-random-address-and-attributes')
+def get_random_address_and_attributes():
+    address = random.choice(list(house_info_list.keys()))
+    data = normalizer.inverse_transform([house_info_list[address]["data"]])[0]
+    columns = get_ai_args()
+    args = {}
+    for i in range(len(columns)):
+        args[columns[i]["name"]] = data[i]
+    return {"address" : address, "lat" : house_info_list[address]["address"]["lat"], "lng" : house_info_list[address]["address"]["lon"], "attributesObj" : args, "attributesList" : list(data)}
+
+@app.route('/get-random-address-and-attributes-with-results')
+def get_random_address_and_attributes_with_results():
+    house = get_random_address_and_attributes()
+    price = house_info_list[house["address"]]["price"]
+    estimate = queryAI(house["attributesObj"])
+    return {"house" : house, "results" : {"price" : price, "estimate" : estimate, "difference" : estimate - price, "percent" : (estimate - price) / (price+0.000001) * 100}}
 
 @app.route('/get-assessment-test')
 def get_house_price_test():
