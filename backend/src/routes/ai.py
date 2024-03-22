@@ -23,7 +23,7 @@ with open('data\\ottawa_ai_model.pkl', 'rb') as f:
 def home():
     return '''<a href="/get-assessment-by-address?address=1466 Launay Avenue, Ottawa, Ontario">Get Price By Address</a><br><br>
     <a href="/get-ai-url">Get AI Test URL</a>  -  <a href="/get-ai-args">Get AI Args</a><br><br>
-    <a href="/get-all-addresseses">Get All Addresses</a> - <a href="/get-all-addresseses-by-prefix?prefix=1466">Get Addresses By Prefix</a><br><br>
+    <a href="/get-all-addresses">Get All Addresses</a> - <a href="/get-all-addresses-by-prefix?prefix=1466">Get Addresses By Prefix</a><br><br>
     <br><br>
     <a href="/get-assessment-by-address-test?address=615 Reid St, Fredericton, NB, CA">Get Test Price By Address</a><br><br>
     <a href="/get-test-url">Get Test URL</a>  -  <a href="/get-ai-args-test">Get Test AI Args</a><br><br>
@@ -112,7 +112,7 @@ def get_house_price_address():
     print(query)
     value = queryAI(query)
     actual = queryArgs["data"]["price"]
-    return {"estimate" : value, "actual" : actual, "difference" : value - actual, "percent" : (value - actual) / (actual+0.000001) * 100}
+    return {"estimate" : value, "actual" : actual, "difference" : value - actual, "percent" : (value - actual) / (actual+0.000001) * 100, "lat" : query["latitude"], "lng" : query["longitude"]}
 
 @app.route('/get-all-addresses-by-prefix')
 def search_for_address_prefix():
@@ -122,13 +122,16 @@ def search_for_address_prefix():
     addresses = get_all_addresses()
     matches = []
     for address in addresses:
-        if address.startswith(prefix):
+        if address["address"].startswith(prefix):
             matches.append(address)
     return matches
 
-@app.route('/get-all-addresseses')
+@app.route('/get-all-addresses')
 def get_all_addresses():
-    return list(house_info_list.keys())
+    output = []
+    for house in house_info_list.keys():
+        output.append({"address" : house, "lat" : house_info_list[house]["address"]["lat"], "lng" : house_info_list[house]["address"]["lon"]})
+    return output
 
 @app.route('/get-assessment-test')
 def get_house_price_test():
