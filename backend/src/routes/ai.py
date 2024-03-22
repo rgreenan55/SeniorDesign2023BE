@@ -26,6 +26,7 @@ def home():
     <a href="/get-all-addresses">Get All Addresses</a> - <a href="/get-all-addresses-by-prefix?prefix=1466">Get Addresses By Prefix</a><br><br>
     <a href="/get-random-address-and-attributes">Get Random Address and Attributes</a><br><br>
     <a href="/get-random-address-and-attributes-with-results">Get Random Address and Attributes with Results</a><br><br>
+    <a href="/get-AI-accuracy">Get AI Accuracy</a><br><br>
     <br><br>
     <a href="/get-assessment-by-address-test?address=615 Reid St, Fredericton, NB, CA">Get Test Price By Address</a><br><br>
     <a href="/get-test-url">Get Test URL</a>  -  <a href="/get-ai-args-test">Get Test AI Args</a><br><br>
@@ -145,6 +146,20 @@ def get_random_address_and_attributes():
         args[columns[i]["name"]] = data[i]
     return {"address" : address, "lat" : house_info_list[address]["address"]["lat"], "lng" : house_info_list[address]["address"]["lon"], "attributesObj" : args, "attributesList" : list(data)}
 
+@app.route('/get-AI-accuracy')
+def get_ai_accuracy():
+    percentageDifference = 0
+    for address in house_info_list.keys():
+        params = {}
+        data = house_info_list[address]
+        test_data = {"data" : normalizer.inverse_transform([data["data"]])[0], "price" : data["price"]}
+        columns = get_ai_args()
+        for i in range(len(columns)):
+            params[columns[i]["name"]] = test_data["data"][i]
+        estimate = queryAI(params)
+        percentageDifference += abs(estimate - house_info_list[address]["price"]) / (house_info_list[address]["price"] + 0.000001) * 100
+    return {"precentDiff" : percentageDifference / len(house_info_list), "accuracy" : 100 - percentageDifference / len(house_info_list)}
+
 @app.route('/get-random-address-and-attributes-with-results')
 def get_random_address_and_attributes_with_results():
     house = get_random_address_and_attributes()
@@ -225,9 +240,9 @@ def get_test_url():
 @app.route('/get-ai-url')
 def get_ai_url():
     params = {}
-    test_data = house_info_list[list(house_info_list.keys())[random.randint(0, len(house_info_list) - 1)]]
+    data = house_info_list[list(house_info_list.keys())[random.randint(0, len(house_info_list) - 1)]]
     # print(test_data)
-    test_data["data"] = normalizer.inverse_transform([test_data["data"]])[0]
+    test_data = {"data" : normalizer.inverse_transform([data["data"]])[0], "price" : data["price"]}
     # print(test_data)
     columns = get_ai_args()
     for i in range(len(columns)):
@@ -250,10 +265,11 @@ def test_throughput():
     startTime = time.time()
     for i in range(testCount):
         params = {}
-        test_data = house_info_list[list(house_info_list.keys())[random.randint(0, len(house_info_list) - 1)]]
+        data = house_info_list[list(house_info_list.keys())[random.randint(0, len(house_info_list) - 1)]]
+        test_data = {"data" : normalizer.inverse_transform([data["data"]])[0], "price" : data["price"]}
         columns = get_ai_args()
         for i in range(len(columns)):
-            params[columns[i]] = test_data["data"][i]
+            params[columns[i]["name"]] = test_data["data"][i]
         queryAI(params)
     timeTaken = time.time() - startTime
     return {"time" : timeTaken, "timePerQuery" : timeTaken / testCount}
