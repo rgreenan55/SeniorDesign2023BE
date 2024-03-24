@@ -27,27 +27,7 @@ def home():
     <a href="/get-random-address-and-attributes">Get Random Address and Attributes</a><br><br>
     <a href="/get-random-address-and-attributes-with-results">Get Random Address and Attributes with Results</a><br><br>
     <a href="/get-AI-accuracy">Get AI Accuracy</a><br><br>
-    <br><br>
-    <a href="/get-assessment-by-address-test?address=615 Reid St, Fredericton, NB, CA">Get Test Price By Address</a><br><br>
-    <a href="/get-test-url">Get Test URL</a>  -  <a href="/get-ai-args-test">Get Test AI Args</a><br><br>
-    '''
-
-# @app.route('/get-house-info')
-# def get_house_info():
-#     if not 'address' in request.args:
-#         return "No address provided, use the format /get-house-info?address='address'"
-#     address = request.args.get('address')
-#     if address == None or address == "":
-#         return "No address provided"
-#     if address in house_info_list_test:
-#         house_info = house_info_list_test[address]
-#     else:
-#         house_info = "Balls" 
-#     return house_info
-
-def populateHouseInfoListTest(house_info_list_test):
-    house_info_list_test["615 Reid St, Fredericton, NB, CA"] = {'bedrooms': 5, 'bathrooms': 2, 'sqft_living': 1500, 'sqft_lot': 10000, 'floors': 1, 'yr_built': 1990, 'yr_renovated': 2010, 'postal_code': 52345, 'lat': 45.9516307, 'long': -66.6493478}
-    house_info_list_test["test"] = house_info_list_test["615 Reid St, Fredericton, NB, CA"]
+'''
 
 def populateHouseInfoList(house_info_list):
     with open('data\\ottawa_eval_data.pkl', 'rb') as f:
@@ -68,15 +48,6 @@ def getArgsByAddress(address):
         return {"status": False, "data": "No address provided"}
     if address in house_info_list:
         return {"status": True, "data": house_info_list[address]}
-    else:
-        return {"status": False, "data": "House Not Available"}
-    
-def getArgsByAddressTest(address):
-    print(address)
-    if address == None or address == "":
-        return {"status": False, "data": "No address provided"}
-    if address in house_info_list_test:
-        return {"status": True, "data": house_info_list_test[address]}
     else:
         return {"status": False, "data": "House Not Available"}
 
@@ -103,10 +74,10 @@ def get_house_price():
 @app.route('/get-assessment-by-address')
 def get_house_price_address():
     if not 'address' in request.args:
-         return "No address provided"
+         return {"error" : "true" , "reason" : "No address provided"}
     queryArgs = getArgsByAddress(request.args.get("address"))
     if not queryArgs["status"]:
-        return queryArgs["data"]
+        return {"error" : "true" , "reason" : queryArgs["data"]}
     argsList = get_ai_args()
     query = {}
     queryArgs["data"]["data"] = normalizer.inverse_transform([queryArgs["data"]["data"]])[0]
@@ -120,7 +91,7 @@ def get_house_price_address():
 @app.route('/get-all-addresses-by-prefix')
 def search_for_address_prefix():
     if not 'prefix' in request.args:
-        return "No prefix provided"
+        return {"error" : "No prefix provided"}
     prefix = request.args.get('prefix')
     addresses = get_all_addresses()
     matches = []
@@ -167,36 +138,9 @@ def get_random_address_and_attributes_with_results():
     estimate = queryAI(house["attributesObj"])
     return {"house" : house, "results" : {"price" : price, "estimate" : estimate, "difference" : estimate - price, "percent" : (estimate - price) / (price+0.000001) * 100}}
 
-@app.route('/get-assessment-test')
-def get_house_price_test():
-    argsList = get_ai_args_test()
-    queryArgs = {}
-    for arg in argsList:
-        if arg in request.args:
-            queryArgs[arg] = request.args.get(arg)
-        else:
-            queryArgs[arg] = 0
-    value = queryAITest(queryArgs)
-    return {"estimate" : value, "actual" : 0}
-
-@app.route('/get-assessment-by-address-test')
-def get_house_price_address_test():
-    if not 'address' in request.args:
-         return "No address provided"
-    queryArgs = getArgsByAddressTest(request.args.get("address"))
-    if not queryArgs["status"]:
-        return queryArgs["data"]
-    value = queryAITest(queryArgs["data"])
-    return {"estimate" : value, "actual" : 0}
-    
-
 @app.route('/get-ai-args')
 def get_ai_args():
     return columns
-
-@app.route('/get-ai-args-test')
-def get_ai_args_test():
-    return ["bedrooms", "bathrooms", "sqft_living", "sqft_lot", "floors", "yr_built", "yr_renovated", "postal_code", "lat", "long"]
 
 def queryAI(query):
     # print("Query: \n", query, "\n")
@@ -206,36 +150,6 @@ def queryAI(query):
     # print("After Normalized: \n", query, "\n")
     value = model_rf.predict(query)[0]
     return value
-
-def queryAITest(query):
-    value = 0
-    value += int(query["bedrooms"]) * 1000
-    value += int(query["bathrooms"]) * 1000
-    value += int(query["sqft_living"]) * 100
-    value += int(query["sqft_lot"]) * 25
-    value += int(query["floors"]) * 1000
-    value += ((int(query["yr_built"]) - 1950) * 100) if int(query["yr_built"]) != 0 else 0
-    value += ((int(query["yr_renovated"]) - 2010) * 1000) if int(query["yr_renovated"]) != 0 else 0
-    value += int(query["postal_code"]) * 1
-    return value
-
-@app.route('/get-test-url')
-def get_test_url():
-    params = {}
-    params["bedrooms"] = random.randint(1, 5)
-    params["bathrooms"] = max(params["bedrooms"] + random.randint(-2, 1), 1)
-    params["sqft_living"] = random.randint(500, 5000)
-    params["sqft_lot"] = params["sqft_living"] + random.randint(500, 5000)
-    params["floors"] = random.randint(1, 3)
-    params["yr_built"] = random.randint(1900, 2023)
-    params["yr_renovated"] = random.randint(params["yr_built"], 2024)
-    params["postal_code"] = random.randint(48000, 98100)
-    params["lat"] = random.randint(47, 48)
-    params["long"] = random.randint(-122, -121)
-    url = "http://localhost:5000/get-assessment-test?"
-    for param in params:
-        url += param + "=" + str(params[param]) + "&"
-    return "<a href=" + url[:-1] + ">" + url[:-1] + "</a>"
 
 @app.route('/get-ai-url')
 def get_ai_url():
@@ -274,6 +188,4 @@ def test_throughput():
     timeTaken = time.time() - startTime
     return {"time" : timeTaken, "timePerQuery" : timeTaken / testCount}
 
-house_info_list_test = {}
-populateHouseInfoListTest(house_info_list_test)
 house_info_list = populateHouseInfoObject()
