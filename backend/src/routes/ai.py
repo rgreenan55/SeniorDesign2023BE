@@ -17,13 +17,18 @@ import time
 with open('data\\ottawa_ai_model.pkl', 'rb') as f:
     columns = pickle.load(f)
     model_rf = pickle.load(f)
+    normalizer = pickle.load(f)
 
-@app.route('/')
+@app.route('/', methods=['GET', 'POST'])
 def home():
-    return '''<a href="/get-house-price-by-address?address=615 Reid St, Fredericton, NB, CA">Get Price By Address</a><br><br>
+    return '''<a href="/get-assessment-by-address?address=1466 Launay Avenue, Ottawa, Ontario">Get Price By Address</a><br><br>
     <a href="/get-ai-url">Get AI Test URL</a>  -  <a href="/get-ai-args">Get AI Args</a><br><br>
+    <a href="/get-all-addresses">Get All Addresses</a> - <a href="/get-all-addresses-by-prefix?prefix=1466">Get Addresses By Prefix</a><br><br>
+    <a href="/get-random-address-and-attributes">Get Random Address and Attributes</a><br><br>
+    <a href="/get-random-address-and-attributes-with-results">Get Random Address and Attributes with Results</a><br><br>
+    <a href="/get-AI-accuracy">Get AI Accuracy</a><br><br>
     <br><br>
-    <a href="/get-house-price-by-address-test?address=615 Reid St, Fredericton, NB, CA">Get Test Price By Address</a><br><br>
+    <a href="/get-assessment-by-address-test?address=615 Reid St, Fredericton, NB, CA">Get Test Price By Address</a><br><br>
     <a href="/get-test-url">Get Test URL</a>  -  <a href="/get-ai-args-test">Get Test AI Args</a><br><br>
     '''
 
@@ -51,6 +56,12 @@ def populateHouseInfoList(house_info_list):
         for i in range(len(x_test_data)):
             info = {"data" : x_test_data[i], "price" : y_test_data[i]}
             house_info_list.append(info)
+    return house_info_list
+
+def populateHouseInfoObject():
+    with open('data\\ottawa_eval_data_with_addr_formatted.pkl', 'rb') as f:
+        houses = pickle.load(f)
+    return houses
 
 def getArgsByAddress(address):
     if address == None or address == "":
@@ -69,34 +80,94 @@ def getArgsByAddressTest(address):
     else:
         return {"status": False, "data": "House Not Available"}
 
-@app.route('/get-house-price')
+@app.route('/get-assessment-by-arguments')
 def get_house_price():
     argsList = get_ai_args()
     queryArgs = {}
     if "price" in request.args:
-        price = int(float(request.args.get("price")))
+        price = float(request.args.get("price"))
     else:
         price = 0
-    for arg in argsList:
+    for argDict in argsList:
+        arg = argDict["name"]
         if arg in request.args:
             queryArgs[arg] = request.args.get(arg)
         else:
             queryArgs[arg] = 0
     value = queryAI(queryArgs)
-    print(value, price)
+    # value *= 100000
+    # price *= 100000
+    # print(value, price)
     return {"estimate" : value, "actual" : price, "difference" : value - price, "percent" : (value - price) / (price+0.000001) * 100}
 
-@app.route('/get-house-price-by-address')
+@app.route('/get-assessment-by-address')
 def get_house_price_address():
     if not 'address' in request.args:
          return "No address provided"
     queryArgs = getArgsByAddress(request.args.get("address"))
     if not queryArgs["status"]:
         return queryArgs["data"]
-    value = queryAI(queryArgs["data"])
-    return {"estimate" : value, "actual" : 0}
+    argsList = get_ai_args()
+    query = {}
+    queryArgs["data"]["data"] = normalizer.inverse_transform([queryArgs["data"]["data"]])[0]
+    for i in range(len(argsList)):
+        query[argsList[i]["name"]] = queryArgs["data"]["data"][i]
+    print(query)
+    value = queryAI(query)
+    actual = queryArgs["data"]["price"]
+    return {"estimate" : value, "actual" : actual, "difference" : value - actual, "percent" : (value - actual) / (actual+0.000001) * 100, "lat" : query["latitude"], "lng" : query["longitude"]}
 
-@app.route('/get-house-price-test')
+@app.route('/get-all-addresses-by-prefix')
+def search_for_address_prefix():
+    if not 'prefix' in request.args:
+        return "No prefix provided"
+    prefix = request.args.get('prefix')
+    addresses = get_all_addresses()
+    matches = []
+    for address in addresses:
+        if address["address"].startswith(prefix):
+            matches.append(address)
+    return matches
+
+@app.route('/get-all-addresses')
+def get_all_addresses():
+    output = []
+    for house in house_info_list.keys():
+        output.append({"address" : house, "lat" : house_info_list[house]["address"]["lat"], "lng" : house_info_list[house]["address"]["lon"]})
+    return output
+
+@app.route('/get-random-address-and-attributes')
+def get_random_address_and_attributes():
+    address = random.choice(list(house_info_list.keys()))
+    data = normalizer.inverse_transform([house_info_list[address]["data"]])[0]
+    columns = get_ai_args()
+    args = {}
+    for i in range(len(columns)):
+        args[columns[i]["name"]] = data[i]
+    return {"address" : address, "lat" : house_info_list[address]["address"]["lat"], "lng" : house_info_list[address]["address"]["lon"], "attributesObj" : args, "attributesList" : list(data)}
+
+@app.route('/get-AI-accuracy')
+def get_ai_accuracy():
+    percentageDifference = 0
+    for address in house_info_list.keys():
+        params = {}
+        data = house_info_list[address]
+        test_data = {"data" : normalizer.inverse_transform([data["data"]])[0], "price" : data["price"]}
+        columns = get_ai_args()
+        for i in range(len(columns)):
+            params[columns[i]["name"]] = test_data["data"][i]
+        estimate = queryAI(params)
+        percentageDifference += abs(estimate - house_info_list[address]["price"]) / (house_info_list[address]["price"] + 0.000001) * 100
+    return {"precentDiff" : percentageDifference / len(house_info_list), "accuracy" : 100 - percentageDifference / len(house_info_list)}
+
+@app.route('/get-random-address-and-attributes-with-results')
+def get_random_address_and_attributes_with_results():
+    house = get_random_address_and_attributes()
+    price = house_info_list[house["address"]]["price"]
+    estimate = queryAI(house["attributesObj"])
+    return {"house" : house, "results" : {"price" : price, "estimate" : estimate, "difference" : estimate - price, "percent" : (estimate - price) / (price+0.000001) * 100}}
+
+@app.route('/get-assessment-test')
 def get_house_price_test():
     argsList = get_ai_args_test()
     queryArgs = {}
@@ -108,7 +179,7 @@ def get_house_price_test():
     value = queryAITest(queryArgs)
     return {"estimate" : value, "actual" : 0}
 
-@app.route('/get-house-price-by-address-test')
+@app.route('/get-assessment-by-address-test')
 def get_house_price_address_test():
     if not 'address' in request.args:
          return "No address provided"
@@ -121,7 +192,6 @@ def get_house_price_address_test():
 
 @app.route('/get-ai-args')
 def get_ai_args():
-    print(columns)
     return columns
 
 @app.route('/get-ai-args-test')
@@ -129,7 +199,11 @@ def get_ai_args_test():
     return ["bedrooms", "bathrooms", "sqft_living", "sqft_lot", "floors", "yr_built", "yr_renovated", "postal_code", "lat", "long"]
 
 def queryAI(query):
+    # print("Query: \n", query, "\n")
     query = pd.DataFrame(query, index=[0])
+    # print("Before Normalized: \n", query, "\n")
+    query = normalizer.transform(query)
+    # print("After Normalized: \n", query, "\n")
     value = model_rf.predict(query)[0]
     return value
 
@@ -158,7 +232,7 @@ def get_test_url():
     params["postal_code"] = random.randint(48000, 98100)
     params["lat"] = random.randint(47, 48)
     params["long"] = random.randint(-122, -121)
-    url = "http://localhost:5000/get-house-price-test?"
+    url = "http://localhost:5000/get-assessment-test?"
     for param in params:
         url += param + "=" + str(params[param]) + "&"
     return "<a href=" + url[:-1] + ">" + url[:-1] + "</a>"
@@ -166,12 +240,15 @@ def get_test_url():
 @app.route('/get-ai-url')
 def get_ai_url():
     params = {}
-    test_data = house_info_list[random.randint(0, len(house_info_list) - 1)]
+    data = house_info_list[list(house_info_list.keys())[random.randint(0, len(house_info_list) - 1)]]
+    # print(test_data)
+    test_data = {"data" : normalizer.inverse_transform([data["data"]])[0], "price" : data["price"]}
+    # print(test_data)
     columns = get_ai_args()
     for i in range(len(columns)):
-        params[columns[i]] = test_data["data"][i]
-    print(test_data)
-    url = "http://localhost:5000/get-house-price?"
+        params[columns[i]["name"]] = test_data["data"][i]
+    #print(test_data)
+    url = "http://localhost:5000/get-assessment-by-arguments?"
     for param in params:
         url += param + "=" + str(params[param]) + "&"
     url += "price=" + str(test_data["price"])
@@ -188,15 +265,15 @@ def test_throughput():
     startTime = time.time()
     for i in range(testCount):
         params = {}
-        test_data = house_info_list[random.randint(0, len(house_info_list) - 1)]
+        data = house_info_list[list(house_info_list.keys())[random.randint(0, len(house_info_list) - 1)]]
+        test_data = {"data" : normalizer.inverse_transform([data["data"]])[0], "price" : data["price"]}
         columns = get_ai_args()
         for i in range(len(columns)):
-            params[columns[i]] = test_data["data"][i]
+            params[columns[i]["name"]] = test_data["data"][i]
         queryAI(params)
     timeTaken = time.time() - startTime
     return {"time" : timeTaken, "timePerQuery" : timeTaken / testCount}
 
 house_info_list_test = {}
 populateHouseInfoListTest(house_info_list_test)
-house_info_list = []
-populateHouseInfoList(house_info_list)
+house_info_list = populateHouseInfoObject()

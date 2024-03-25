@@ -30,7 +30,7 @@ print(houses.isna().sum())
 #Visualizes the data to see the feature distributions and which ones have extreme disparities/values, which in this case is average bedrooms, rooms, populations and occupation
 houses.hist(figsize=(12, 10), bins=30, edgecolor="black")
 plt.subplots_adjust(hspace=0.7, wspace=0.4)
-plt.show()
+#plt.show()
 
 sns.scatterplot(
     data=california_housing.frame,
@@ -45,7 +45,7 @@ sns.scatterplot(
 #plots the scatterplot to show the relationship between median house value and the longitude and latitude of a house. 
 plt.legend(title="MedHouseVal", bbox_to_anchor=(1.05, 0.95), loc="upper left")
 _ = plt.title("Median house value depending of\n their spatial location")
-plt.show()
+#plt.show()
 
 #show correlations of each feature to target variable (in this case MedHouseVal)
 corr_matrix = houses.corr()
@@ -65,13 +65,12 @@ x_training_data, x_test_data, y_training_data, y_test_data = train_test_split(x_
 
 #Normalizes the data to a clean graph
 sc = StandardScaler()
-x_training_data = sc.fit_transform(x_training_data)
-x_test_data = sc.fit_transform(x_test_data)
-
+sc = sc.fit(x_data)
+x_training_data = sc.transform(x_training_data)
+x_test_data = sc.transform(x_test_data)
 
 # Random Forest Model, n_estimators is the number of trees
-model_rf = RandomForestRegressor(n_estimators=30, max_features=3,
-random_state=42)
+model_rf = RandomForestRegressor(n_estimators=30, max_features=3, random_state=42)
 # Train the model on the training data.
 model_rf.fit(x_training_data, y_training_data)
 # Make predictions on the model using the test data.
@@ -80,8 +79,10 @@ lin_mse = mean_squared_error(y_test_data, predictions_rf)
 lin_rmse = np.sqrt(lin_mse)
 print(lin_rmse * 100000) #100 000 because median house value needs to be represented in one hundreds of thousands (i.e. the value 1 is $100 000)
 with open('ai_model.pkl', 'wb') as f:
-    pickle.dump(list(x_data.columns.values), f)
+    columns = [{"name" :column, "type" : str(dtype)} for column, dtype in zip(x_data.columns, x_data.dtypes)]
+    pickle.dump(columns, f)
     pickle.dump(model_rf, f)
+    pickle.dump(sc, f)
 with open('eval_data.pkl', 'wb') as f:
     pickle.dump(x_test_data, f)
     pickle.dump(y_test_data, f)
