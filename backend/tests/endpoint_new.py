@@ -88,8 +88,6 @@ print("\t\tTesting no prefix...")
 response = requests.get("http://127.0.0.1:5000/get-all-addresses-by-prefix?prefix=")
 assert response.status_code == 200, "Invalid status code"
 resJson = response.json()
-
-
 assert len(resJson) >= 190, "Invalid address count"
 print("\t\t\tTest passed!")
 

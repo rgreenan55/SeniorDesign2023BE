@@ -27,6 +27,7 @@ def home():
     <a href="/get-random-address-and-attributes">Get Random Address and Attributes</a><br><br>
     <a href="/get-random-address-and-attributes-with-results">Get Random Address and Attributes with Results</a><br><br>
     <a href="/get-AI-accuracy">Get AI Accuracy</a><br><br>
+    <a href="/test-throughput?count=100">Test Throughput</a><br><br>
 '''
 
 def populateHouseInfoList(house_info_list):
@@ -80,9 +81,9 @@ def get_house_price_address():
         return {"error" : "true" , "reason" : queryArgs["data"]}
     argsList = get_ai_args()
     query = {}
-    queryArgs["data"]["data"] = normalizer.inverse_transform([queryArgs["data"]["data"]])[0]
+    queryData = normalizer.inverse_transform([queryArgs["data"]["data"]])[0]
     for i in range(len(argsList)):
-        query[argsList[i]["name"]] = queryArgs["data"]["data"][i]
+        query[argsList[i]["name"]] = queryData[i]
     print(query)
     value = queryAI(query)
     actual = queryArgs["data"]["price"]
