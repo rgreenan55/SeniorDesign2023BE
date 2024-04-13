@@ -24,21 +24,3 @@ Ensure you have:
 3. Ensure you have all the packages: `pip3 install -r ../requirements.txt --target=".\venv\Lib\site-packages" --upgrade` **IMPORTANT! IF YOU INSTALL OTHER PACKAGES ADD THEM TO "requirements.txt"**
 4. Move into the src directory: `cd src`
 5. Run the server: `flask run` or `python app.py` (running the second command runs it in debug mode, so it will restart every time a file is changed)
-
-### Usage AI Training
-
-#### First Time:
-1. Clone this git: `git clone https://github.com/rgreenan55/SeniorDesign2023BE.git`
-2. Move into the directory: `cd SeniorDesign2023BE\ai`
-3. Create a Virtual Environment: `python -m venv venv`
-4. Load the venv: `.\venv\Scripts\activate`
-5. Install all the packages: `pip3 install -r ../requirements.txt --target=".\venv\Lib\site-packages" --upgrade` **IMPORTANT! IF YOU INSTALL OTHER PACKAGES ADD THEM TO "requirements.txt"**
-6. Move into the src directory: `cd src`
-7. Run the ai `python randomforest.py`
-
-#### Other Times:
-1. Move into the main directory: `cd SeniorDesign2023BE\ai`
-2. Load the venv: `.\venv\Scripts\activate`
-3. Ensure you have all the packages: `pip3 install -r ../requirements.txt --target=".\venv\Lib\site-packages" --upgrade` **IMPORTANT! IF YOU INSTALL OTHER PACKAGES ADD THEM TO "requirements.txt"**
-4. Move into the src directory: `cd src`
-7. Run the ai `python randomforest.py`
